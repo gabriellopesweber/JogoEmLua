@@ -1,0 +1,3 @@
+//Comando para executar o jogo.
+
+love\love .
