@@ -1,21 +1,99 @@
 LARGURA_TELA = 320
 ALTURA_TELA = 480
 MAX_MET = 25
+FIM_JOGO = false
 
 player = {
     src = "imagens/nave.png",
-    largura = 64,
-    altura = 64,
-    x = LARGURA_TELA / 2 -64/2,
-    y = ALTURA_TELA - 64/2 - 40
+    largura = 55,
+    altura = 63,
+    x = LARGURA_TELA / 2 -55/2,
+    y = ALTURA_TELA - 63/2 - 40,
+    disparo = {}
 }
 
 meteoros = {}
+
+function efetuarDisparo()
+
+    disparo:play()
+
+    local disparo = {
+        x = player.x + 25, -- horizontal 
+        y = player.y,
+        largura = 16,
+        altura = 16
+    }
+    table.insert(player.disparo, disparo)
+
+end
+
+function moveDisparo()
+    for i = #player.disparo, 1, -1 do
+        if player.disparo[i].y > 0 then
+            player.disparo[i].y = player.disparo[i].y - 1
+        else
+            table.remove(player.disparo, i)
+        end
+    end
+end
+
+function destroiPlayer()
+    destruicao:play()
+    player.src = "imagens/explosao_nave.png"
+    player.imagem = love.graphics.newImage(player.src)
+    player.largura = 67
+    player.altura = 77
+end
+
+
+function isColisao(X1, Y1, L1, A1, X2, Y2, L2, A2)
+    return X2 < X1 + L1 and
+           X1 < X2 + L2 and
+           Y1 < Y2 + A2 and
+           Y2 < Y1 + A1
+end
+
+function trocaMusicaDeFundo()
+    musica_ambiente:stop()
+    gameover:play()
+end
+
+function validaColisaoComAviao()
+    for k, meteoro in pairs(meteoros) do
+        if isColisao(meteoro.x, meteoro.y, meteoro.largura, meteoro.altura, 
+                    player.x, player.y, player.largura, player.altura) then
+            trocaMusicaDeFundo()
+            destroiPlayer()
+            FIM_JOGO = true
+        end
+    end
+end
+
+function validaColisaoComDisparo()
+    for i = #player.disparo, 1, -1 do
+        for j = #meteoros, 1, -1 do
+            if isColisao(player.disparo[i].x, player.disparo[i].y, player.disparo[i].largura, player.disparo[i].altura, 
+                        meteoros[j].x, meteoros[j].y, meteoros[j].largura, meteoros[j].altura) then
+                table.remove(player.disparo, i)
+                table.remove(meteoros, j)
+                break
+            end
+        end
+    end
+end
+
+function validaColisoes()
+    validaColisaoComAviao()
+    validaColisaoComDisparo()
+end
 
 function criaMeteoro()
     meteoro = {
         x = math.random(LARGURA_TELA),
         y = - 100,
+        largura = 50,
+        altura = 44,
         peso = math.random(3), 
         deslocamento_horizontal = math.random(-1, 1)
     }
@@ -54,24 +132,52 @@ function movePlayer()
 end
 
 function love.load()
-    math.randomseed(os.time())
     love.window.setMode(LARGURA_TELA, ALTURA_TELA, {resizable = false}) -- Largura, Altura, Tabela de dimensao.
     love.window.setTitle("14-BIS <==> Meteoro")
+
+    math.randomseed(os.time())
+    
     backgroud = love.graphics.newImage("imagens/background.png")
     player.imagem = love.graphics.newImage(player.src)
     meteorito_img = love.graphics.newImage("imagens/meteoro.png")
+    tiro_img = love.graphics.newImage("imagens/tiro.png")
+    game_over_img = love.graphics.newImage("imagens/gameover.png")
+
+    musica_ambiente = love.audio.newSource("audios/ambiente.wav", 'static')
+    destruicao = love.audio.newSource("audios/destruicao.wav", 'static')
+    gameover = love.audio.newSource("audios/game_over.wav", 'static')
+    disparo = love.audio.newSource("audios/disparo.wav", 'static')
+
+    musica_ambiente:setLooping(true)
+    musica_ambiente:play()
+
+    
 end
 
 -- Increase the size of the rectangle every frame.
 function love.update(dt)
-    if love.keyboard.isDown('w','a','s','d') then
-        movePlayer()
+    if not FIM_JOGO then
+        if love.keyboard.isDown('w','a','s','d') then
+            movePlayer()
+        end
+        removeMeteoros()
+        if #meteoros <= MAX_MET then
+            criaMeteoro()
+        end
+        moveMeteoro()
+        moveDisparo()
+        validaColisoes()
     end
-    removeMeteoros()
-    if #meteoros <= MAX_MET then
-        criaMeteoro()
+end
+
+function love.keypressed(tecla)
+    if tecla == "escape" then
+        love.event.quit()
+    elseif tecla == "space" then
+
+        efetuarDisparo()
+
     end
-    moveMeteoro()
 end
 
 -- Draw a coloured rectangle.
@@ -80,5 +186,11 @@ function love.draw()
     love.graphics.draw(player.imagem, player.x, player.y)
     for k,meteoro in pairs(meteoros) do
         love.graphics.draw(meteorito_img, meteoro.x, meteoro.y)
+    end
+    for k,disparo in pairs(player.disparo) do
+        love.graphics.draw(tiro_img, disparo.x, disparo.y)
+    end
+    if FIM_JOGO then
+        love.graphics.draw(game_over_img, LARGURA_TELA/2 - game_over_img:getWidth()/2, ALTURA_TELA/2 - game_over_img:getHeight()/2)
     end
 end
