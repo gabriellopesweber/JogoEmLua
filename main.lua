@@ -2,6 +2,9 @@ LARGURA_TELA = 320
 ALTURA_TELA = 480
 MAX_MET = 25
 FIM_JOGO = false
+VENCEDOR = false
+METEOROS_ATINGIDOS = 0
+OBJETIVO_METEORO = 100
 
 player = {
     src = "imagens/nave.png",
@@ -15,8 +18,7 @@ player = {
 meteoros = {}
 
 function efetuarDisparo()
-
-    disparo:play()
+    disparo_som:play()
 
     local disparo = {
         x = player.x + 25, -- horizontal 
@@ -25,7 +27,6 @@ function efetuarDisparo()
         altura = 16
     }
     table.insert(player.disparo, disparo)
-
 end
 
 function moveDisparo()
@@ -75,6 +76,7 @@ function validaColisaoComDisparo()
         for j = #meteoros, 1, -1 do
             if isColisao(player.disparo[i].x, player.disparo[i].y, player.disparo[i].largura, player.disparo[i].altura, 
                         meteoros[j].x, meteoros[j].y, meteoros[j].largura, meteoros[j].altura) then
+                METEOROS_ATINGIDOS = METEOROS_ATINGIDOS + 1
                 table.remove(player.disparo, i)
                 table.remove(meteoros, j)
                 break
@@ -86,6 +88,15 @@ end
 function validaColisoes()
     validaColisaoComAviao()
     validaColisaoComDisparo()
+end
+
+function validaObjetivoConcluido()
+    if METEOROS_ATINGIDOS >= OBJETIVO_METEORO then
+        VENCEDOR = true
+        musica_ambiente:stop()
+        win_som:play()
+        disparo_som:stop()
+    end
 end
 
 function criaMeteoro()
@@ -140,23 +151,25 @@ function love.load()
     backgroud = love.graphics.newImage("imagens/background.png")
     player.imagem = love.graphics.newImage(player.src)
     meteorito_img = love.graphics.newImage("imagens/meteoro.png")
+    met_icon = love.graphics.newImage("imagens/met_icon.png")
     tiro_img = love.graphics.newImage("imagens/tiro.png")
     game_over_img = love.graphics.newImage("imagens/gameover.png")
+    win_img = love.graphics.newImage("imagens/vencedor.png")
 
     musica_ambiente = love.audio.newSource("audios/ambiente.wav", 'static')
     destruicao = love.audio.newSource("audios/destruicao.wav", 'static')
     gameover = love.audio.newSource("audios/game_over.wav", 'static')
-    disparo = love.audio.newSource("audios/disparo.wav", 'static')
+    disparo_som = love.audio.newSource("audios/disparo.wav", 'static')
+    win_som = love.audio.newSource("audios/winner.wav", 'static')
 
     musica_ambiente:setLooping(true)
     musica_ambiente:play()
 
-    
 end
 
 -- Increase the size of the rectangle every frame.
 function love.update(dt)
-    if not FIM_JOGO then
+    if not FIM_JOGO and not VENCEDOR then
         if love.keyboard.isDown('w','a','s','d') then
             movePlayer()
         end
@@ -167,6 +180,7 @@ function love.update(dt)
         moveMeteoro()
         moveDisparo()
         validaColisoes()
+        validaObjetivoConcluido()
     end
 end
 
@@ -174,9 +188,9 @@ function love.keypressed(tecla)
     if tecla == "escape" then
         love.event.quit()
     elseif tecla == "space" then
-
-        efetuarDisparo()
-
+        if FIM_JOGO == false and VENCEDOR == false then
+            efetuarDisparo()
+        end
     end
 end
 
@@ -193,4 +207,11 @@ function love.draw()
     if FIM_JOGO then
         love.graphics.draw(game_over_img, LARGURA_TELA/2 - game_over_img:getWidth()/2, ALTURA_TELA/2 - game_over_img:getHeight()/2)
     end
+    if VENCEDOR then
+        love.graphics.draw(win_img, LARGURA_TELA/2 - win_img:getWidth()/2, ALTURA_TELA/2 - win_img:getHeight()/2)
+    end
+    love.graphics.draw(met_icon, 0, 0)
+    love.graphics.print("Meteoros Restantes " .. OBJETIVO_METEORO - METEOROS_ATINGIDOS, 25, 1)
+    --love.graphics.print("FIM do jogo: " .. FIM_JOGO, 40,40)
+    --love.graphics.print("vencedor: " .. VENCEDOR, 40,40)
 end
