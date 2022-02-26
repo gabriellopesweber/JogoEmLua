@@ -212,6 +212,4 @@ function love.draw()
     end
     love.graphics.draw(met_icon, 0, 0)
     love.graphics.print("Meteoros Restantes " .. OBJETIVO_METEORO - METEOROS_ATINGIDOS, 25, 1)
-    --love.graphics.print("FIM do jogo: " .. FIM_JOGO, 40,40)
-    --love.graphics.print("vencedor: " .. VENCEDOR, 40,40)
 end
