@@ -1,10 +1,12 @@
 LARGURA_TELA = 320
 ALTURA_TELA = 480
 MAX_MET = 25
+INICIO_JOGO = true
 FIM_JOGO = false
 VENCEDOR = false
 METEOROS_ATINGIDOS = 0
 OBJETIVO_METEORO = 100
+EVENTO_CLICK = false
 
 player = {
     src = "imagens/nave.png",
@@ -15,7 +17,28 @@ player = {
     disparo = {}
 }
 
+play_img = {
+    src = "imagens/menu/play.png",
+    x = LARGURA_TELA / 2 - 198/2,
+    y = ALTURA_TELA - 99/2 - 40
+}
+
 meteoros = {}
+
+function love.mousepressed(x, y, button, istouch)
+    if button == 1 then
+        EVENTO_CLICK = true
+        INICIO_JOGO = false
+    end
+ end
+
+function iniciaJogo()
+    if(INICIO_JOGO == true) then 
+        if love.mouse.isDown(1) then
+            love.mousepressed(play_img.x, play_img.y, 1, false)
+        end
+    end
+end
 
 function efetuarDisparo()
     disparo_som:play()
@@ -128,16 +151,16 @@ end
 
 function movePlayer()
     -- Teclas para uso do jogo - W S D A
-    if love.keyboard.isDown('w') then
+    if love.keyboard.isDown('w') or love.keyboard.isDown('up') then
         player.y = player.y - 2
     end
-    if love.keyboard.isDown('s') then
+    if love.keyboard.isDown('s') or love.keyboard.isDown('down') then
         player.y = player.y + 2
     end
-    if love.keyboard.isDown('d') then
+    if love.keyboard.isDown('d') or love.keyboard.isDown('right') then
         player.x = player.x + 2
     end
-    if love.keyboard.isDown('a') then
+    if love.keyboard.isDown('a') or love.keyboard.isDown('left') then
         player.x = player.x - 2
     end
 end
@@ -147,8 +170,11 @@ function love.load()
     love.window.setTitle("14-BIS <==> Meteoro")
 
     math.randomseed(os.time())
-    
+
     backgroud = love.graphics.newImage("imagens/background.png")
+    play_img.imagem = love.graphics.newImage(play_img.src)
+    exit_img = love.graphics.newImage("imagens/menu/exit.png")
+    comandos_img = love.graphics.newImage("imagens/menu/comandos.png")
     player.imagem = love.graphics.newImage(player.src)
     meteorito_img = love.graphics.newImage("imagens/meteoro.png")
     met_icon = love.graphics.newImage("imagens/met_icon.png")
@@ -164,23 +190,26 @@ function love.load()
 
     musica_ambiente:setLooping(true)
     musica_ambiente:play()
-
 end
 
 -- Increase the size of the rectangle every frame.
 function love.update(dt)
-    if not FIM_JOGO and not VENCEDOR then
-        if love.keyboard.isDown('w','a','s','d') then
-            movePlayer()
+    if INICIO_JOGO ~= true then
+        if not FIM_JOGO and not VENCEDOR then
+            if love.keyboard.isDown('w', 'a', 's', 'd', 'up', 'down', 'right', 'left') then
+                movePlayer()
+            end
+            removeMeteoros()
+            if #meteoros <= MAX_MET then
+                criaMeteoro()
+            end
+            moveMeteoro()
+            moveDisparo()
+            validaColisoes()
+            validaObjetivoConcluido()
         end
-        removeMeteoros()
-        if #meteoros <= MAX_MET then
-            criaMeteoro()
-        end
-        moveMeteoro()
-        moveDisparo()
-        validaColisoes()
-        validaObjetivoConcluido()
+    else
+        iniciaJogo()
     end
 end
 
@@ -198,18 +227,29 @@ end
 function love.draw()
     love.graphics.draw(backgroud, 0, 0)
     love.graphics.draw(player.imagem, player.x, player.y)
-    for k,meteoro in pairs(meteoros) do
-        love.graphics.draw(meteorito_img, meteoro.x, meteoro.y)
+    if INICIO_JOGO then
+        love.graphics.draw(comandos_img, LARGURA_TELA/2 - comandos_img:getWidth()/2, ALTURA_TELA - 200)
+        love.graphics.draw(exit_img, LARGURA_TELA/2 - exit_img:getWidth()/2, ALTURA_TELA - 320)
+        love.graphics.draw(play_img.imagem, LARGURA_TELA/2 - play_img.imagem:getWidth()/2, ALTURA_TELA - 400)
+        if EVENTO_CLICK then
+            love.graphics.print("Clicando: " .. "Sim", 25, 1)
+        else
+            love.graphics.print("Clicando: " .. "Nao", 25, 1)
+        end
+    else
+        for k,meteoro in pairs(meteoros) do
+            love.graphics.draw(meteorito_img, meteoro.x, meteoro.y)
+        end
+        for k,disparo in pairs(player.disparo) do
+            love.graphics.draw(tiro_img, disparo.x, disparo.y)
+        end
+        if FIM_JOGO then
+            love.graphics.draw(game_over_img, LARGURA_TELA/2 - game_over_img:getWidth()/2, ALTURA_TELA/2 - game_over_img:getHeight()/2)
+        end
+        if VENCEDOR then
+            love.graphics.draw(win_img, LARGURA_TELA/2 - win_img:getWidth()/2, ALTURA_TELA/2 - win_img:getHeight()/2)
+        end
+        love.graphics.draw(met_icon, 0, 0)
+        love.graphics.print("Meteoros Restantes " .. OBJETIVO_METEORO - METEOROS_ATINGIDOS, 25, 1)
     end
-    for k,disparo in pairs(player.disparo) do
-        love.graphics.draw(tiro_img, disparo.x, disparo.y)
-    end
-    if FIM_JOGO then
-        love.graphics.draw(game_over_img, LARGURA_TELA/2 - game_over_img:getWidth()/2, ALTURA_TELA/2 - game_over_img:getHeight()/2)
-    end
-    if VENCEDOR then
-        love.graphics.draw(win_img, LARGURA_TELA/2 - win_img:getWidth()/2, ALTURA_TELA/2 - win_img:getHeight()/2)
-    end
-    love.graphics.draw(met_icon, 0, 0)
-    love.graphics.print("Meteoros Restantes " .. OBJETIVO_METEORO - METEOROS_ATINGIDOS, 25, 1)
 end
